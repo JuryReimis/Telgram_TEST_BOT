@@ -6,26 +6,25 @@ class Test:
         }
         self.questions_quantity = questions_quantity
 
-
-    def creat(self, text, answers):
+    def create(self, text, answers):
         self.default["questions"].append(
                         {
                             "text": text,
                             "answers": [
                                 {
-                                    "text": "",
+                                    "text": answers[0],
                                     "valid": False
                                 },
                                 {
-                                    "text": "",
+                                    "text": answers[1],
                                     "valid": False
                                 },
                                 {
-                                    "text": "",
+                                    "text": answers[2],
                                     "valid": False
                                 },
                                 {
-                                    "text": "",
+                                    "text": answers[3],
                                     "valid": False
                                 }
                             ]

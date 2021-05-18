@@ -1,4 +1,4 @@
-from keyboards.inline_keyboards.insults_choices import choice_menu
+from keyboards.inline_keyboards.insults_choices import insult
 from main import bot, dp
 from keyboards.default.menu import menu
 from aiogram.types import Message, ReplyKeyboardRemove
@@ -24,7 +24,7 @@ async def thanks(message: Message):
 
 @dp.message_handler(Text(equals="Хочу получить оскорбления на выбор"))
 async def give_insults(message: Message):
-    await message.reply(text="Ну выбирай, если не боишься", reply_markup=choice_menu)
+    await message.reply(text="Ну выбирай, если не боишься", reply_markup=insult())
 
 
 async def welcome_message(message: Message):
