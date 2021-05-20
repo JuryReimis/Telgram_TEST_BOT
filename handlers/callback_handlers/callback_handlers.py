@@ -40,6 +40,7 @@ async def test(call: CallbackQuery):
 async def right_answer_selected(call: CallbackQuery, callback_data: dict):
     from handlers.command_handlers.command_handlers import iterations, test
     test.default["questions"][iterations-1]["answers"][int(callback_data["selected"])]["valid"] = True
+    await call.message.edit_reply_markup()
     if iterations != test.questions_quantity:
         await call.message.answer(text=f"Введите {iterations + 1} вопрос")
         await CreateNameTest.Question_create.set()
