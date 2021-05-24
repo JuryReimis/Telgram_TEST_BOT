@@ -35,6 +35,22 @@ async def create_test_name(message: Message):
     await CreateNameTest.first()
 
 
+@dp.message_handler(Command("cancel"), state=[CreateNameTest.Name_is_creating, CreateNameTest.Test_len, CreateNameTest.Question_create, CreateNameTest.Create_answers, CreateNameTest.Right_answer_became])
+async def cancel_creating_test(message: Message, state: FSMContext):
+    global test
+    global iterations
+    global answers
+    global questions_text
+    global answer
+    test = None
+    iterations = 0
+    answers = 1
+    questions_text = None
+    answer = []
+    await state.finish()
+    await message.answer(text="Создание теста отменено!")
+
+
 @dp.message_handler(state=CreateNameTest.Name_is_creating)
 async def create_test_len(message: Message, state: FSMContext):
     name = str(message.text)
@@ -45,6 +61,7 @@ async def create_test_len(message: Message, state: FSMContext):
         data = await state.get_data()
         print(data)
         await message.reply(text="Сколько будет вопросов?")
+        await message.answer(text="Если вам не нравится что-то из того, что вы ввели, вы можете сбросить создание теста, введя /cancel")
         await CreateNameTest.Test_len.set()
     else:
         await message.reply(text="Тест с таким названием уже существует")
@@ -118,7 +135,7 @@ async def create_questions(message: Message, state: FSMContext):
         table = TestsTable("tests.sqlite3")
         print("Out From Iteration")
         questions = test.get_questions()
-        table.into_table("tests", (test.default["test_name"], "MAIN_ADMIN", test.questions_quantity, 0, False))
+        table.into_table("tests", (test.default["test_name"], "MAIN_ADMIN", test.questions_quantity, 0, False))  #Первое задействование базы данных уже после ввода всех вопросов
         for question in questions:
             for ans in question.get("answers"):
                 if ans["valid"] is True:
