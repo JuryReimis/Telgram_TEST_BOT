@@ -1,10 +1,8 @@
 # Обработчики
-import pprint
 
 from aiogram.dispatcher import FSMContext
 
 from db.initialisation import TestsTable
-from keyboards.inline_keyboards.callback_datas import create_right_answer_callback
 from keyboards.inline_keyboards.choice_right_answer_in_test import create_menu
 from keyboards.inline_keyboards.polling_keyboard import create_poll_menu
 from main import bot, dp
@@ -127,6 +125,7 @@ async def create_questions(message: Message, state: FSMContext):
                     right_answer = ans["text"]
             table.into_table(table="questions", notes=[test.default["test_name"], str(question["text"]), str(question["answers"][0]["text"]), str(question["answers"][1]["text"]), str(question["answers"][2]["text"]), str(question["answers"][3]["text"])], right_answer=right_answer)
         await state.finish()
+        iterations = 0
         table.cur.close()
         await message.answer("Тест создан!")
 
