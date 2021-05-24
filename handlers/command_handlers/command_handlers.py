@@ -3,8 +3,10 @@ import pprint
 
 from aiogram.dispatcher import FSMContext
 
+from db.initialisation import TestsTable
 from keyboards.inline_keyboards.callback_datas import create_right_answer_callback
 from keyboards.inline_keyboards.choice_right_answer_in_test import create_menu
+from keyboards.inline_keyboards.polling_keyboard import create_poll_menu
 from main import bot, dp
 from handlers.text_handlers.text_handlers import welcome_message
 from keyboards.default import menu
@@ -38,11 +40,19 @@ async def create_test_name(message: Message):
 @dp.message_handler(state=CreateNameTest.Name_is_creating)
 async def create_test_len(message: Message, state: FSMContext):
     name = str(message.text)
-    await state.update_data(name=name)
-    data = await state.get_data()
-    print(data)
-    await message.reply(text="Сколько будет вопросов?")
-    await CreateNameTest.next()
+    val = TestsTable("tests.sqlite3")
+    val.select_all("tests", "test_name", name)
+    if val.cur.fetchone() is None:
+        await state.update_data(name=name)
+        data = await state.get_data()
+        print(data)
+        await message.reply(text="Сколько будет вопросов?")
+        await CreateNameTest.Test_len.set()
+    else:
+        await message.reply(text="Тест с таким названием уже существует")
+        await message.answer(text="Введите новое название теста")
+        await CreateNameTest.Name_is_creating.set()
+    val.cur.close()
 
 
 test = None
@@ -59,9 +69,8 @@ async def first_question(message: Message, state: FSMContext):
     data = await state.get_data()
     global test
     test = Test(test_name=data["name"], questions_quantity=data["questions_quantity"])
-    print(test.default)
     await message.answer(text="Введите первый вопрос:")
-    await CreateNameTest.next()
+    await CreateNameTest.Question_create.set()
 
 
 @dp.message_handler(state=CreateNameTest.Question_create)
@@ -69,9 +78,21 @@ async def write_complete(message: Message, state: FSMContext):
     print("Я тут!")
     global questions_text
     global iterations
-    iterations += 1
-    questions_text = message.text
-    await create_questions(message, state)
+    questions_text = str(message.text)
+    val = TestsTable(database="tests.sqlite3")
+    val.select_all(table="questions", param="question_text", note=questions_text)
+    question_is_created = val.cur
+    if val.cur.fetchone() is None:
+        await create_questions(message, state)
+    else:
+        question_id = val.cur["question_id"]
+        await message.reply(text="Уже существует такой вопрос\nВот его параметры: ")
+        await message.answer(text=f"Вопрос:{val.cur['questions_text']}\nВарианты ответов: \n{val.cur['answer_1']}\n{val.cur['answer_2']}\n{val.cur['answer_3']}\n{val.cur['answer_4']}")
+        val.select_all(table='right_answers', param=question_id, note=question_id)
+        val.cur.fetchone()
+        await message.answer(text=f"Правильным ответом является: {val.cur['right_answer']}")
+        await message.answer(text="Добавить этот вопрос с установленными параметрами?", reply_markup=create_poll_menu(question_is_created))
+    val.cur.close()
 
 
 @dp.message_handler(state=CreateNameTest.Create_answers)
@@ -80,7 +101,7 @@ async def create_questions(message: Message, state: FSMContext):
     global iterations
     global answers
     global questions_text
-    if iterations <= test.questions_quantity:
+    if iterations < test.questions_quantity:
         if answers == 1:
             await message.reply(text="Теперь необходимо задать четыре варианта ответа, один из которых должен быть правильный")
         if answers <= 4:
@@ -88,13 +109,26 @@ async def create_questions(message: Message, state: FSMContext):
             answers += 1
             await CreateNameTest.Answer_became.set()
         else:
+            iterations += 1
             answers = 1
             test.create(questions_text, answer)
+            print(iterations)
             await message.answer(text="Какой ответ является верным?", reply_markup=create_menu(answer))
             await CreateNameTest.Right_answer_became.set()
             answer.clear()
     else:
+        table = TestsTable("tests.sqlite3")
+        print("Out From Iteration")
+        questions = test.get_questions()
+        table.into_table("tests", (test.default["test_name"], "MAIN_ADMIN", test.questions_quantity, 0, False))
+        for question in questions:
+            for ans in question.get("answers"):
+                if ans["valid"] is True:
+                    right_answer = ans["text"]
+            table.into_table(table="questions", notes=[test.default["test_name"], str(question["text"]), str(question["answers"][0]["text"]), str(question["answers"][1]["text"]), str(question["answers"][2]["text"]), str(question["answers"][3]["text"])], right_answer=right_answer)
         await state.finish()
+        table.cur.close()
+        await message.answer("Тест создан!")
 
 
 @dp.message_handler(state=CreateNameTest.Answer_became)

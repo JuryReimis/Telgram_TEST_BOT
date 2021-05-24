@@ -30,3 +30,6 @@ class Test:
                             ]
                         }
         )
+
+    def get_questions(self):
+        return self.default["questions"]
