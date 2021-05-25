@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from keyboards.inline_keyboards.callback_datas import polling_callback
+from keyboards.inline_keyboards.callback_datas import polling_callback, select_test_callback
 
 
 def create_poll_menu(params: dict):
@@ -13,6 +13,18 @@ def create_poll_menu(params: dict):
                 )),
                 InlineKeyboardButton(text="Нет", callback_data=polling_callback.new(
                     selected=False
+                ))
+            ]
+        ]
+    )
+
+
+def random_5():
+    poll_menu = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="", callback_data=select_test_callback.new(
+                    selected=""
                 ))
             ]
         ]

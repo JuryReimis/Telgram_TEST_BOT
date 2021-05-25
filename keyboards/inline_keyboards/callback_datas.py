@@ -8,3 +8,4 @@ create_right_answer_callback = CallbackData("right_answer", "selected")
 
 polling_callback = CallbackData("polling", "selected", "context")
 
+select_test_callback = CallbackData("test", "selected")
