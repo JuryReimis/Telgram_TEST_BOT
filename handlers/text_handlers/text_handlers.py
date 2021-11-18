@@ -33,7 +33,7 @@ async def give_insults(message: Message):
 @dp.message_handler(Text(equals="Пройти тест"))
 async def start_test(message: Message):
     await StartTest.Test_started.set()
-    await message.answer(text="Какой вы хотите тест?", reply_markup=random_5())
+    await message.reply(text="Какой вы хотите тест?", reply_markup=random_5())
 
 
 async def welcome_message(message: Message):

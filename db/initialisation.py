@@ -11,6 +11,7 @@ class TestsTable:
             else:
                 self.dir = "db/" + database
             self.conn = sqlite3.connect(database=self.dir)
+            self.conn.set_trace_callback(print)
             self.cur = self.conn.cursor()
             self.cur.row_factory = sqlite3.Row
         except:
@@ -75,24 +76,42 @@ class TestsTable:
         context = f"""SELECT * FROM {table} WHERE {param} = ?"""
         self.cur.execute(context, (note, ))
 
-    def select_random_str(self, table, quantity):
-        self.cur.execute(f"""SELECT * FROM {table} WHERE """)
+    def create_temp_table(self):
+        self.cur.execute("""CREATE TEMPORARY TABLE temp_1(
+        parametr INTEGER)""")
 
+    def select_random_str(self):
+        context = f"""SELECT * FROM tests
+        WHERE test_id NOT IN (SELECT * FROM temp)
+        LIMIT 1 
+        OFFSET ABS(RANDOM()) % MAX((SELECT COUNT(*) FROM tests), 1)
+        """
+        self.cur.execute(context)
+
+
+class TemporaryTable:
+    def __init__(self):
+        try:
+            self.con = sqlite3.connect("db/tests.sqlite3")
+            self.con.set_trace_callback(print)
+            self.cur = self.con.cursor()
+            self.create_table()
+        except:
+            print("Ошибка создания временной бд")
+            self.close_connection()
+
+    def create_table(self):
+        self.cur.execute("""CREATE TEMPORARY TABLE IF NOT EXISTS temp(
+        param INTEGER)
+        """)
+
+    def into_table(self, param):
+        self.cur.execute("""INSERT INTO temp(param) VALUES (?)""", param)
+
+    def close_connection(self):
+        self.cur.close()
 
 if __name__ == "__main__":          #Для тестов
     tests = TestsTable("tests.sqlite3")
+    tests.select_all("tests", "test_id", 15)
     tests.cur.close()
-
-
-
-
-
-
-# CREATE TABLE IF NOT EXISTS tests(
-#     test_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT ,
-#     test_name TEXT,
-#     creater TEXT,
-#     questions INT,
-#     completed INT,
-#     visible NUMERIC
-#     )

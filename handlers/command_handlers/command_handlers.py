@@ -100,13 +100,13 @@ async def write_complete(message: Message, state: FSMContext):
     if val.cur.fetchone() is None:
         await create_questions(message, state)
     else:
-        question_id = val.cur["question_id"]
+        question = question_is_created.execute(f"""SELECT * from questions WHERE question_text = ?""", (questions_text,)).fetchone()
+        val.select_all(table="right_answers", param="question_id", note=question["question_id"])
+        right_answer = val.cur.fetchone()["right_answer"]
         await message.reply(text="Уже существует такой вопрос\nВот его параметры: ")
-        await message.answer(text=f"Вопрос:{val.cur['questions_text']}\nВарианты ответов: \n{val.cur['answer_1']}\n{val.cur['answer_2']}\n{val.cur['answer_3']}\n{val.cur['answer_4']}")
-        val.select_all(table='right_answers', param=question_id, note=question_id)
-        val.cur.fetchone()
-        await message.answer(text=f"Правильным ответом является: {val.cur['right_answer']}")
-        await message.answer(text="Добавить этот вопрос с установленными параметрами?", reply_markup=create_poll_menu(question_is_created))
+        await message.answer(text=f"Вопрос:{questions_text}\nВарианты ответов: \n{question['answer_1']}\n{question['answer_2']}\n{question['answer_3']}\n{question['answer_4']}")
+        await message.answer(text=f"Правильным ответом является: {right_answer}")
+        await message.answer(text="Добавить этот вопрос с установленными параметрами?", reply_markup=create_poll_menu(params={"question": question, "right_answer": right_answer}))
     val.cur.close()
 
 
