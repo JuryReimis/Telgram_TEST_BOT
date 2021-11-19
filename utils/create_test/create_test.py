@@ -1,15 +1,15 @@
 class Test:
-    def __init__(self, test_name, questions_quantity: int):
-        self.default = {
+    def __init__(self, test_name: str, questions_quantity: int):
+        self.test_structure = {
             "test_name": test_name,
             "questions": []
         }
         self.questions_quantity = questions_quantity
 
-    def create(self, text, answers):
-        self.default["questions"].append(
+    def create(self, question_text, answers):
+        self.test_structure["questions"].append(
                         {
-                            "text": text,
+                            "text": question_text,
                             "answers": [
                                 {
                                     "text": answers[0],
@@ -32,4 +32,4 @@ class Test:
         )
 
     def get_questions(self):
-        return self.default["questions"]
+        return self.test_structure["questions"]

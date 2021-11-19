@@ -39,27 +39,27 @@ async def test(call: CallbackQuery):
 
 @dp.callback_query_handler(create_right_answer_callback.filter(), state=CreateNameTest.Right_answer_became)
 async def right_answer_selected(call: CallbackQuery, callback_data: dict, state: FSMContext):
-    TestCreator.test.default["questions"][TestCreator.iterations-1]["answers"][int(callback_data["selected"])]["valid"] = True
+    TestCreator.test.test_structure["questions"][TestCreator.question_registered - 1]["answers"][int(callback_data["selected"])]["valid"] = True
     await call.message.edit_reply_markup()
-    if TestCreator.iterations != TestCreator.test.questions_quantity:
-        await call.message.answer(text=f"Введите {TestCreator.iterations + 1} вопрос")
-        await CreateNameTest.Question_create.set()
+    if TestCreator.question_registered != TestCreator.test.questions_quantity:
+        await call.message.answer(text=f"Введите {TestCreator.question_registered + 1} вопрос")
+        await CreateNameTest.Question_selection.set()
     else:
-        pprint.pprint(TestCreator.test.default)
+        pprint.pprint(TestCreator.test.test_structure)
         await TestCreator.create_questions(message=call.message, state=state)
 
 
-@dp.callback_query_handler(polling_callback.filter(), state=CreateNameTest.Question_create)
+@dp.callback_query_handler(polling_callback.filter(), state=CreateNameTest.Question_selection)
 async def created_question_accepted(call: CallbackQuery, callback_data: dict):
     if callback_data["selected"] is True:
         question_text = callback_data["context"]["question_text"]
         answers = [callback_data["context"]["answer_1"], callback_data["context"]["answer_2"], callback_data["context"]["answer_3"], callback_data["context"]["answer_4"]]
         database = TestsTable(database="tests.sqlite3")
         TestCreator.test.create(question_text, answers)
-        for question in TestCreator.test.default["questions"][-1]["answers"]:
+        for question in TestCreator.test.test_structure["questions"][-1]["answers"]:
             database.select_all("right_answers", "right_answer", question["text"])
-            if not database.cur.fetchone() is None:
-                TestCreator.test.default["questions"][-1]["answers"][question]["valid"] = True
+            if not database.curs.fetchone() is None:
+                TestCreator.test.test_structure["questions"][-1]["answers"][question]["valid"] = True
 
 
 
