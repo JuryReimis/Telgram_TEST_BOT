@@ -13,6 +13,7 @@ class TestsTable:
             self.con = sqlite3.connect(database=self.dir)
             self.con.set_trace_callback(print)
             self.curs = self.con.cursor()
+            self.test_id = None
             self.con.execute("""PRAGMA foreign_keys = ON""")
             self.curs.row_factory = sqlite3.Row
         except:
@@ -63,16 +64,18 @@ class TestsTable:
             self.curs.execute(
                 """INSERT INTO questions(question_text, answer_1, answer_2, answer_3, answer_4) VALUES (?, ?, ?, ?, ?)""",
                 notes)
-            self.save_table()
             self.select_all("questions", "question_id", self.curs.lastrowid)
             last_row = self.curs.fetchone()
             self.curs.execute("""INSERT INTO right_answers(question_id, right_answer) VALUES (?, ?)""",
                               (last_row["question_id"], right_answer))
             self.curs.execute("""INSERT INTO questions_in_tests(test_id, question_id) VALUES (?, ?)""",
                               (self.test_id, last_row["question_id"]))
-            self.save_table()
 
-    def save_table(self):
+    def add_preexisting_question_in_new_test(self, question_id):
+        self.curs.execute("""INSERT INTO questions_in_tests(test_id, question_id) VALUES (?, ?)""",
+                          (self.test_id, question_id))
+
+    def save_tables(self):
         self.con.commit()
 
     def del_table(self):
@@ -87,13 +90,6 @@ class TestsTable:
         self.curs.execute("""CREATE TEMPORARY TABLE temp_1(
         parametr INTEGER)""")
 
-    def select_random_str(self):
-        context = f"""SELECT * FROM tests
-        WHERE test_id NOT IN (SELECT * FROM temp)
-        LIMIT 1 
-        OFFSET ABS(RANDOM()) % MAX((SELECT COUNT(*) FROM tests), 1)
-        """
-        self.curs.execute(context)
 
 
 if __name__ == "__main__":  # Для тестов

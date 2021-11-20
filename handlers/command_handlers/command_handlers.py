@@ -22,6 +22,8 @@ class TestCreator:
     answers_received = 1        # Получено ответов
     question_text: str = ""
     answers_list: list = []
+    question: dict
+    db_connection = TestsTable(database="tests.sqlite3")
 
     @staticmethod
     @dp.message_handler(Command("cancel"),
@@ -48,9 +50,8 @@ class TestCreator:
     @dp.message_handler(state=CreateNameTest.Name_is_creating)
     async def create_test_len(message: Message, state: FSMContext):
         name = str(message.text)
-        val = TestsTable("tests.sqlite3")
-        val.select_all("tests", "test_name", name)
-        if val.curs.fetchone() is None:
+        TestCreator.db_connection.select_all("tests", "test_name", name)
+        if TestCreator.db_connection.curs.fetchone() is None:
             await state.update_data(name=name)
             data = await state.get_data()
             print("data in create_test_len", data)
@@ -61,7 +62,6 @@ class TestCreator:
             await message.reply(text="Тест с таким названием уже существует")
             await message.answer(text="Введите новое название теста")
             await CreateNameTest.Name_is_creating.set()
-        val.curs.close()
 
     @staticmethod
     @dp.message_handler(state=CreateNameTest.Get_tests_length)
@@ -70,6 +70,7 @@ class TestCreator:
         await state.update_data(questions_quantity=questions_quantity)
         data = await state.get_data()
         print("data in registration_tests_length", data)
+        TestCreator.db_connection.into_table(table="tests", notes=(data["name"], "MAIN_ADMIN", questions_quantity, 0, 0))
         TestCreator.test = Test(test_name=data["name"], questions_quantity=data["questions_quantity"])
         await message.answer(text="Введите первый вопрос:")
         await CreateNameTest.Question_selection.set()
@@ -78,20 +79,20 @@ class TestCreator:
     @dp.message_handler(state=CreateNameTest.Question_selection)                # Сюда попадают все вопросы, которые вводятся при фиксации вопросов
     async def question_selection(message: Message, state: FSMContext):
         TestCreator.question_text = str(message.text)
-        db_connection = TestsTable(database="tests.sqlite3")
-        db_connection.select_all(table="questions", param="question_text", note=TestCreator.question_text)
-        question_is_created = db_connection.curs
-        if db_connection.curs.fetchone() is None:
+        TestCreator.db_connection.select_all(table="questions", param="question_text", note=TestCreator.question_text)
+        question_is_created = TestCreator.db_connection.curs
+        if TestCreator.db_connection.curs.fetchone() is None:
             await TestCreator.create_questions(message, state)
         else:
-            question = question_is_created.execute(f"""SELECT * from questions WHERE question_text = ?""", (TestCreator.question_text,)).fetchone()
-            db_connection.select_all(table="right_answers", param="question_id", note=question["question_id"])
-            right_answer = db_connection.curs.fetchone()["right_answer"]
+            TestCreator.question = question_is_created.execute(f"""SELECT * from questions WHERE question_text = ?""", (TestCreator.question_text,)).fetchone()
+            print("question:", TestCreator.question)
+            TestCreator.db_connection.select_all(table="right_answers", param="question_id", note=TestCreator.question["question_id"])
+            right_answer = TestCreator.db_connection.curs.fetchone()["right_answer"]
             await message.reply(text="Уже существует такой вопрос\nВот его параметры: ")
-            await message.answer(text=f"Вопрос:{TestCreator.question_text}\nВарианты ответов: \n{question['answer_1']}\n{question['answer_2']}\n{question['answer_3']}\n{question['answer_4']}")
+            await message.answer(text=f"Вопрос:{TestCreator.question_text}\nВарианты ответов: \n{TestCreator.question['answer_1']}\n{TestCreator.question['answer_2']}\n{TestCreator.question['answer_3']}\n{TestCreator.question['answer_4']}")
             await message.answer(text=f"Правильным ответом является: {right_answer}")
-            await message.answer(text="Добавить этот вопрос с установленными параметрами?", reply_markup=create_poll_menu(params={"question": question, "right_answer": right_answer}))
-        db_connection.curs.close()
+            await message.answer(text="Добавить этот вопрос с установленными параметрами?",
+                                 reply_markup=create_poll_menu(params="question_selection"))
 
     @staticmethod
     @dp.message_handler(state=CreateNameTest.Create_answers)
@@ -104,26 +105,24 @@ class TestCreator:
                 TestCreator.answers_received += 1
                 await CreateNameTest.Answer_became.set()
             else:
-                TestCreator.question_registered += 1
-                TestCreator.answers_received = 1
                 TestCreator.test.create(question_text=TestCreator.question_text, answers=TestCreator.answers_list)
-                print(TestCreator.question_registered)
+                print("question registered:", TestCreator.question_registered)
                 await message.answer(text="Какой ответ является верным?", reply_markup=create_menu(TestCreator.answers_list))
                 await CreateNameTest.Right_answer_became.set()
                 TestCreator.answers_list.clear()
+                TestCreator.answers_received = 1
         else:
-            table = TestsTable("tests.sqlite3")
             print("Out From Iteration")
             questions = TestCreator.test.get_questions()
-            table.into_table("tests", (TestCreator.test.test_structure["test_name"], "MAIN_ADMIN", TestCreator.test.questions_quantity, 0, False))  #Первое задействование базы данных уже после ввода всех вопросов
             for question in questions:
                 for ans in question.get("answers"):
                     if ans["valid"] is True:
                         right_answer = ans["text"]
-                table.into_table(table="questions", notes=[str(question["text"]), str(question["answers"][0]["text"]), str(question["answers"][1]["text"]), str(question["answers"][2]["text"]), str(question["answers"][3]["text"])], right_answer=right_answer)
+                TestCreator.db_connection.into_table(table="questions", notes=[str(question["text"]), str(question["answers"][0]["text"]), str(question["answers"][1]["text"]), str(question["answers"][2]["text"]), str(question["answers"][3]["text"])], right_answer=right_answer)
             await state.finish()
             TestCreator.question_registered = 0
-            table.curs.close()
+            TestCreator.db_connection.save_tables()
+            TestCreator.db_connection.curs.close()
             await message.answer("Тест создан!")
 
     @staticmethod
@@ -146,7 +145,3 @@ async def welcome(message: Message):
 @dp.message_handler(Command("menu"))
 async def call_menu(message: Message):
     await message.answer("Чего надо?", reply_markup=menu)
-
-
-
-

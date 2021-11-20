@@ -1,5 +1,4 @@
 from keyboards.inline_keyboards.insults_choices import insult
-from keyboards.inline_keyboards.polling_keyboard import random_5
 from main import bot, dp
 from keyboards.default.menu import menu
 from aiogram.types import Message, ReplyKeyboardRemove
@@ -30,10 +29,10 @@ async def give_insults(message: Message):
     await message.reply(text="Ну выбирай, если не боишься", reply_markup=insult())
 
 
-@dp.message_handler(Text(equals="Пройти тест"))
-async def start_test(message: Message):
-    await StartTest.Test_started.set()
-    await message.reply(text="Какой вы хотите тест?", reply_markup=random_5())
+# @dp.message_handler(Text(equals="Пройти тест"))
+# async def start_test(message: Message):
+#     await StartTest.Test_started.set()
+#     await message.reply(text="Какой вы хотите тест?", reply_markup=random_5())
 
 
 async def welcome_message(message: Message):
