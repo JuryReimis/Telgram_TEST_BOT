@@ -75,6 +75,9 @@ class TestsTable:
         self.curs.execute("""INSERT INTO questions_in_tests(test_id, question_id) VALUES (?, ?)""",
                           (self.test_id, question_id))
 
+    def get_all_tests(self):
+        return self.curs.execute("""SELECT test_id, test_name FROM tests""").fetchall()
+
     def save_tables(self):
         self.con.commit()
 
@@ -89,7 +92,6 @@ class TestsTable:
     def create_temp_table(self):
         self.curs.execute("""CREATE TEMPORARY TABLE temp_1(
         parametr INTEGER)""")
-
 
 
 if __name__ == "__main__":  # Для тестов

@@ -2,13 +2,11 @@ import pprint
 
 from aiogram.dispatcher import FSMContext
 from aiogram.types import CallbackQuery, ReplyKeyboardRemove
-
-from db.initialisation import TestsTable
-from handlers.command_handlers.command_handlers import TestCreator
+from handlers.command_handlers.command_handlers import TestCreator, TestShower
+from keyboards.default import menu
 from keyboards.inline_keyboards.callback_datas import insult_callback, test_callback, create_right_answer_callback, \
-    polling_callback
+    polling_callback, test_menu_callback, select_test_callback
 from main import dp
-
 from states.creat_test.creat_test import CreateNameTest
 
 
@@ -16,19 +14,23 @@ from states.creat_test.creat_test import CreateNameTest
 async def give_insult(call: CallbackQuery, callback_data: dict):
     await call.answer(cache_time=30)
     if callback_data.get("insult_force") == str(1):
-        await call.message.answer(text=f"Ну ладно, получай,{call.from_user.first_name}!\nТы разговариваешь, как просроченная колбоса")
+        await call.message.answer(
+            text=f"Ну ладно, получай,{call.from_user.first_name}!\nТы разговариваешь, как просроченная колбоса")
     if callback_data.get("insult_force") == str(2):
-        await call.message.answer(text=f"Хммм...\nНу ладно. Я думаю, что твое имя- {call.from_user.first_name}, означает отвратительный кожаный ублюдок!")
+        await call.message.answer(
+            text=f"Хммм...\nНу ладно. Я думаю, что твое имя- {call.from_user.first_name}, означает отвратительный кожаный ублюдок!")
     if callback_data.get("insult_force") == str(3):
-        await call.message.answer(text=f"Ах ты ублюдок кожаный, решил ко мне лезть, говно собачье, да я тебя сам сожру ублюдок вонючий...")
+        await call.message.answer(
+            text=f"Ах ты ублюдок кожаный, решил ко мне лезть, говно собачье, да я тебя сам сожру ублюдок вонючий...")
     print("Оскорбление выполнено")
 
 
 @dp.callback_query_handler(text="cancel")
 async def cancel_inline_keyboard(call: CallbackQuery):
     await call.message.answer(text="Сдался...")
-    await call.answer(text=f"Ахаха, испугался, кожаный ублюдок, {call.from_user.first_name}!", show_alert=True) #show_alert- сообщение показывается как уведомление на экране
-    await call.message.edit_reply_markup() #Закрывает инлайн клавиатуру
+    await call.answer(text=f"Ахаха, испугался, кожаный ублюдок, {call.from_user.first_name}!",
+                      show_alert=True)  # show_alert- сообщение показывается как уведомление на экране
+    await call.message.edit_reply_markup()  # Закрывает инлайн клавиатуру
 
 
 @dp.callback_query_handler(test_callback.filter())
@@ -39,7 +41,7 @@ async def test(call: CallbackQuery):
 
 @dp.callback_query_handler(create_right_answer_callback.filter(), state=CreateNameTest.Right_answer_became)
 async def right_answer_selected(call: CallbackQuery, callback_data: dict, state: FSMContext):
-    TestCreator.test.test_structure["questions"][TestCreator.question_registered]["answers"][int(callback_data["selected"])]["valid"] = True
+    TestCreator.test.test_structure["questions"][-1]["answers"][int(callback_data["selected"])]["valid"] = True
     await call.message.edit_reply_markup()
     TestCreator.question_registered += 1
     if TestCreator.question_registered != TestCreator.test.questions_quantity:
@@ -65,7 +67,18 @@ async def created_question_accepted(call: CallbackQuery, callback_data: dict, st
             await TestCreator.create_questions(message=call.message, state=state)
 
 
+@dp.callback_query_handler(test_menu_callback.filter())
+async def test_menu_choice(call: CallbackQuery, callback_data: dict):
+    if callback_data["choice"] == "create_test":
+        await TestCreator.create_test_name(message=call.message)
+    elif callback_data["choice"] == "complete_test":
+        await TestShower.complete_test(call.message)
+    elif callback_data["choice"] == "cancel":
+        await call.message.answer(text="Отмена", reply_markup=menu)
+    await call.message.edit_reply_markup()
 
 
-
-
+@dp.callback_query_handler(select_test_callback.filter())
+async def select_test(call: CallbackQuery, callback_data: dict):
+    pass
+    ### Вызвать функцию запуска вывода вопросов

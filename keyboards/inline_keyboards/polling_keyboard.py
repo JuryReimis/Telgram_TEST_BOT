@@ -1,7 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-from db.initialisation import TestsTable
-from keyboards.inline_keyboards.callback_datas import polling_callback, select_test_callback
+from keyboards.inline_keyboards.callback_datas import polling_callback, select_test_callback, test_menu_callback
+from utils.test_selection.test_selection import create_buttons_pattern
 
 
 def create_poll_menu(params: str):
@@ -22,17 +21,36 @@ def create_poll_menu(params: str):
     return poll_menu
 
 
-# def random_5():
-#     print("random_5 is started")
-#     tests = TestsTable("tests.sqlite3")
-#     poll_menu = InlineKeyboardMarkup(row_width=2)
-#     temp_table = TemporaryTable()
-#     for i in range(5):
-#         print("i=", i)
-#         tests.select_random_str()
-#         random_str = tests.curs.fetchone()
-#         temp_table.into_table(random_str["test_id"])
-#         button = InlineKeyboardButton(text=random_str["test_name"], callback_data=select_test_callback.new(selected=random_str["test_id"]))
-#         poll_menu.insert(button)
-#     temp_table.close_connection()
-#     return poll_menu
+def create_keyboard_with_random_tests(rows: int, numbers_in_rows: int, data: list):
+    r"""В функцию передается количество рядов и количество кнопок в ряду
+    Так же в data передается список кортежей каждого теста со всей начинка для кнопок, такая как название теста,
+     отображаемое на кнопке и id этого теста в БД
+     В переменную buttons возвращается значение функции в виде списка списков с кнопками,
+     каждый индекс в списке является рядом в приложении"""
+    buttons = create_buttons_pattern(rows=rows, numbers_in_rows=numbers_in_rows, data=data)
+    random_poll_menu = InlineKeyboardMarkup(
+        inline_keyboard=buttons
+    )
+    return random_poll_menu
+
+
+test_choice = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Создать тест",
+                                 callback_data=test_menu_callback.new(
+                                     choice="create_test"
+                                 )),
+            InlineKeyboardButton(text="Пройти тест",
+                                 callback_data=test_menu_callback.new(
+                                     choice="complete_test"
+                                 ))
+        ],
+        [
+            InlineKeyboardButton(text="Отмена",
+                                 callback_data=test_menu_callback.new(
+                                     choice="cancel"
+                                 ))
+        ]
+    ]
+)

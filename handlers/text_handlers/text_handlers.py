@@ -4,8 +4,6 @@ from keyboards.default.menu import menu
 from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.dispatcher.filters import Text
 
-from states.start_test.start_test import StartTest
-
 
 @dp.message_handler(Text(equals=["Пришли мне приветствие", "Привет"]))
 async def hello_func(message: Message):
@@ -29,17 +27,14 @@ async def give_insults(message: Message):
     await message.reply(text="Ну выбирай, если не боишься", reply_markup=insult())
 
 
-# @dp.message_handler(Text(equals="Пройти тест"))
-# async def start_test(message: Message):
-#     await StartTest.Test_started.set()
-#     await message.reply(text="Какой вы хотите тест?", reply_markup=random_5())
+@dp.message_handler(Text(equals="Тесты"))
+async def open_test_menu(message: Message):
+    from handlers.command_handlers.command_handlers import open_test_menu as show_menu
+    await show_menu(message=message)
 
 
 async def welcome_message(message: Message):
     await message.answer("Привет!\nЯ бот и я не люблю кожаных ублюдков")
-
-
-
 
 # @dp.message_handler()
 # async def no_command(message: Message):

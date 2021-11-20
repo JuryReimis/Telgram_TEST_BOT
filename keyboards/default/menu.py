@@ -10,7 +10,7 @@ menu = ReplyKeyboardMarkup(
             KeyboardButton(text="Хочу получить оскорбления на выбор")
         ],
         [
-            KeyboardButton(text="Пройти тест")
+            KeyboardButton(text="Тесты")
         ],
         [
             KeyboardButton(text="Спасибо")
@@ -18,4 +18,3 @@ menu = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True
 )
-
