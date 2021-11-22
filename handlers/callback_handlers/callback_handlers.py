@@ -56,7 +56,7 @@ async def right_answer_selected(call: CallbackQuery, callback_data: dict, state:
 async def created_question_accepted(call: CallbackQuery, callback_data: dict, state: FSMContext):
     if callback_data["selected"] == "True":
         await call.message.edit_reply_markup()
-        question_id = TestCreator.question["question_id"]
+        question_id = TestCreator.question.question_id
         TestCreator.question_registered += 1
         TestCreator.db_connection.add_preexisting_question_in_new_test(question_id=question_id)
         await call.message.answer(text=f"Вопрос добавлен для вашего теста!")

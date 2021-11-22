@@ -12,9 +12,9 @@ def create_buttons_pattern(rows: int, numbers_in_rows: int, data) -> list:
         for _ in range(numbers_in_rows):
             if data_index >= len(data):
                 return buttons
-            buttons[row].append(InlineKeyboardButton(text=data[data_index]["test_name"],
+            buttons[row].append(InlineKeyboardButton(text=data[data_index].test_name,
                                                      callback_data=select_test_callback.new(
-                                                         selected_id=str(data[data_index]["test_id"])
+                                                         selected_id=str(data[data_index].test_id)
                                                      )))
             data_index += 1
     return buttons
@@ -23,3 +23,7 @@ def create_buttons_pattern(rows: int, numbers_in_rows: int, data) -> list:
 def get_random_tests_data(count: int, db: TestsTable):
     data: list = db.get_all_tests()
     return choices(data, k=count)
+
+
+def get_questions_for_test(test_id: int) -> list:
+    pass

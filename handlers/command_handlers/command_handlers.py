@@ -15,6 +15,7 @@ from states.creat_test.creat_test import CreateNameTest
 from states.start_test.start_test import StartTest
 from utils.create_test.create_test import Test
 from utils.test_selection.test_selection import get_random_tests_data
+from collections import namedtuple
 
 
 class TestCreator:
@@ -23,7 +24,7 @@ class TestCreator:
     answers_received: int  # Получено ответов
     question_text: str  # Текст записанного вопроса
     answers_list: list = []  # Список ответов на записанный вопрос
-    question: dict  # Словарь вопросов
+    question: namedtuple  # Словарь вопросов
     db_connection: TestsTable  # Коннект к базе данных
 
     @staticmethod
@@ -44,7 +45,7 @@ class TestCreator:
     @dp.message_handler(Command("create_test"))
     async def create_test_name(message: Message):
         await message.reply(text="Напиши название теста")
-        TestCreator.db_connection = TestsTable(database="tests.sqlite3")
+        TestCreator.db_connection = TestsTable(database="tests")
         TestCreator.question_registered = 0
         TestCreator.answers_received = 1
         TestCreator.question_text = ""
@@ -77,7 +78,7 @@ class TestCreator:
         data = await state.get_data()
         print("data in registration_tests_length", data)
         TestCreator.db_connection.into_table(table="tests",
-                                             notes=(data["name"], "MAIN_ADMIN", questions_quantity, 0, 0))
+                                             notes=(data["name"], "MAIN_ADMIN", questions_quantity, 0, False))
         TestCreator.test = Test(test_name=data["name"], questions_quantity=data["questions_quantity"])
         await message.answer(text="Введите первый вопрос:")
         await CreateNameTest.Question_selection.set()
@@ -88,19 +89,19 @@ class TestCreator:
     async def question_selection(message: Message, state: FSMContext):
         TestCreator.question_text = str(message.text)
         TestCreator.db_connection.select_all(table="questions", param="question_text", note=TestCreator.question_text)
-        question_is_created = TestCreator.db_connection.curs
         if TestCreator.db_connection.curs.fetchone() is None:
             await TestCreator.create_questions(message, state)
         else:
-            TestCreator.question = question_is_created.execute(f"""SELECT * from questions WHERE question_text = ?""",
-                                                               (TestCreator.question_text,)).fetchone()
+            TestCreator.db_connection.select_all(table="questions", param="question_text",
+                                                 note=TestCreator.question_text)
+            TestCreator.question = TestCreator.db_connection.curs.fetchone()
             print("question:", TestCreator.question)
             TestCreator.db_connection.select_all(table="right_answers", param="question_id",
-                                                 note=TestCreator.question["question_id"])
-            right_answer = TestCreator.db_connection.curs.fetchone()["right_answer"]
+                                                 note=TestCreator.question.question_id)
+            right_answer = TestCreator.db_connection.curs.fetchone().right_answer
             await message.reply(text="Уже существует такой вопрос\nВот его параметры: ")
             await message.answer(
-                text=f"Вопрос:{TestCreator.question_text}\nВарианты ответов: \n{TestCreator.question['answer_1']}\n{TestCreator.question['answer_2']}\n{TestCreator.question['answer_3']}\n{TestCreator.question['answer_4']}")
+                text=f"Вопрос:{TestCreator.question_text}\nВарианты ответов: \n{TestCreator.question.answer_1}\n{TestCreator.question.answer_2}\n{TestCreator.question.answer_3}\n{TestCreator.question.answer_4}")
             await message.answer(text=f"Правильным ответом является: {right_answer}")
             await message.answer(text="Добавить этот вопрос с установленными параметрами?",
                                  reply_markup=create_poll_menu(params="question_selection"))
@@ -157,7 +158,7 @@ class TestShower:
     @staticmethod
     @dp.message_handler(Command("start_test"))
     async def complete_test(message: Message):
-        TestShower.db_connection = TestsTable(database="tests.sqlite3")
+        TestShower.db_connection = TestsTable(database="tests")
         tests_data = get_random_tests_data(count=6, db=TestShower.db_connection)
         await message.answer(text="Выберите тест, который хотите пройти:",
                              reply_markup=create_keyboard_with_random_tests(rows=2, numbers_in_rows=3, data=tests_data))

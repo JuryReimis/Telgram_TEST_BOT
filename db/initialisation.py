@@ -1,100 +1,123 @@
 # Скрипт для создания баз данных
 
 import sqlite3
+import psycopg
+from psycopg.rows import namedtuple_row
+from config import USER_NAME_DB, DB_PASSWORD
 
 
 class TestsTable:
     def __init__(self, database):
         try:
-            if __name__ == "__main__":
-                self.dir = database
-            else:
-                self.dir = "db/" + database
-            self.con = sqlite3.connect(database=self.dir)
-            self.con.set_trace_callback(print)
+            self.dir = database
+            self.con = psycopg.connect(dbname=self.dir, user=USER_NAME_DB, password=DB_PASSWORD, row_factory=namedtuple_row)
             self.curs = self.con.cursor()
-            self.test_id = None
-            self.con.execute("""PRAGMA foreign_keys = ON""")
-            self.curs.row_factory = sqlite3.Row
+            self.last_test_id = None
+            self.create_table("tests")
+            self.create_table("questions")
+            self.create_table("right_answers")
+            self.create_table("questions_in_tests")
+            self.save_tables()
         except:
-            self.curs.close()
+            if self.curs:
+                self.curs.close()
             print("Поймано исключение при инициализации бд")
+
+    def complete_execute(self, request, params=None, how_many="one"):
+        result = self.con.execute(request, params)
+        if how_many == "one":
+            return result.fetchone()
+        return result
 
     def create_table(self, table):
         if table == "tests":
-            self.curs.execute("""CREATE TABLE IF NOT EXISTS tests(
-            test_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            test_name TEXT,
-            creater TEXT,
-            questions INTEGER,
+            self.con.execute("""CREATE TABLE IF NOT EXISTS tests(
+            test_id SERIAL PRIMARY KEY,
+            test_name VARCHAR(50) NOT NULL ,
+            creator VARCHAR(30) NOT NULL ,
+            questions INTEGER NOT NULL ,
             completed INTEGER DEFAULT NULL,
-            visible INTEGER DEFAULT 0 
+            visible BOOLEAN DEFAULT FALSE 
              )""")  # visible - Булево значение
         if table == "questions":
-            self.curs.execute("""CREATE TABLE IF NOT EXISTS questions(
-            question_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            question_text TEXT,
-            answer_1 TEXT,
-            answer_2 TEXT,
-            answer_3 TEXT,
-            answer_4 TEXT
+            self.con.execute("""CREATE TABLE IF NOT EXISTS questions(
+            question_id SERIAL PRIMARY KEY ,
+            question_text TEXT NOT NULL ,
+            answer_1 VARCHAR(50) NOT NULL ,
+            answer_2 VARCHAR(50) NOT NULL ,
+            answer_3 VARCHAR(50) NOT NULL ,
+            answer_4 VARCHAR(50) NOT NULL 
             )""")
         if table == "right_answers":
-            self.curs.execute("""CREATE TABLE IF NOT EXISTS right_answers(
+            self.con.execute("""CREATE TABLE IF NOT EXISTS right_answers(
             question_id INTEGER,
-            right_answer TEXT,
-            FOREIGN KEY (question_id) REFERENCES questions(question_id) ON UPDATE CASCADE ON DELETE CASCADE 
+            right_answer VARCHAR(50),
+            FOREIGN KEY (question_id) REFERENCES tests.public.questions(question_id) ON UPDATE CASCADE ON DELETE CASCADE 
             )""")
         if table == "questions_in_tests":
-            self.curs.execute("""CREATE TABLE IF NOT EXISTS questions_in_tests(
+            self.con.execute("""CREATE TABLE IF NOT EXISTS questions_in_tests(
             test_id INTEGER,
             question_id INTEGER,
-            FOREIGN KEY (test_id) REFERENCES tests(test_id) ON UPDATE CASCADE ON DELETE CASCADE,
-            FOREIGN KEY (question_id) REFERENCES questions(question_id) ON UPDATE CASCADE ON DELETE CASCADE 
+            FOREIGN KEY (test_id) REFERENCES tests.public.tests(test_id) ON UPDATE CASCADE ON DELETE CASCADE,
+            FOREIGN KEY (question_id) REFERENCES tests.public.questions(question_id) ON UPDATE CASCADE ON DELETE CASCADE 
             )""")
 
     def into_table(self, table, notes, right_answer: str = None):
         if table == "tests":
-            self.curs.execute(
-                """INSERT INTO tests(test_name, creater, questions, completed, visible) VALUES (?, ?, ?, ?, ?)""",
+            self.con.execute(
+                """INSERT INTO tests.public.tests(test_name, creator, questions, completed, visible) VALUES (%s, %s, %s, %s, %s)""",
                 notes)
-            self.select_all("tests", "test_id", self.curs.lastrowid)
-            self.test_id = self.curs.fetchone()["test_id"]
+            self.last_test_id = self.last_insert_id("tests", "test_id")
+            print(self.last_test_id)
         if table == "questions":
-            self.curs.execute(
-                """INSERT INTO questions(question_text, answer_1, answer_2, answer_3, answer_4) VALUES (?, ?, ?, ?, ?)""",
+            self.con.execute(
+                """INSERT INTO tests.public.questions(question_text, answer_1, answer_2, answer_3, answer_4) VALUES (%s, %s, %s, %s, %s)""",
                 notes)
-            self.select_all("questions", "question_id", self.curs.lastrowid)
-            last_row = self.curs.fetchone()
-            self.curs.execute("""INSERT INTO right_answers(question_id, right_answer) VALUES (?, ?)""",
-                              (last_row["question_id"], right_answer))
-            self.curs.execute("""INSERT INTO questions_in_tests(test_id, question_id) VALUES (?, ?)""",
-                              (self.test_id, last_row["question_id"]))
+            self.con.execute("""INSERT INTO tests.public.right_answers(question_id, right_answer) VALUES (%s, %s)""",
+                              (self.last_insert_id(table_name="questions", pk_name="question_id"), right_answer))
+            self.con.execute("""INSERT INTO tests.public.questions_in_tests(test_id, question_id) VALUES (%s, %s)""",
+                             (self.last_test_id, self.last_insert_id(table_name="questions", pk_name="question_id")))
 
     def add_preexisting_question_in_new_test(self, question_id):
-        self.curs.execute("""INSERT INTO questions_in_tests(test_id, question_id) VALUES (?, ?)""",
-                          (self.test_id, question_id))
+        self.con.execute("""INSERT INTO tests.public.questions_in_tests(test_id, question_id) VALUES (%s, %s)""",
+                         (self.last_test_id, question_id))
+
+    def get_questions_for_test(self, test_id):
+        question_ids = [i["question_id"] for i in
+                        self.con.execute("""SELECT question_id FROM tests.public.questions_in_tests WHERE test_id = %s""",
+                                          (test_id,)).fetchall()]
+        return self.con.execute("""SELECT * FROM tests.public.questions WHERE question_id in (%s) """, (question_ids,)).fetchall()
 
     def get_all_tests(self):
-        return self.curs.execute("""SELECT test_id, test_name FROM tests""").fetchall()
+        return self.con.execute("""SELECT test_id, test_name FROM tests.public.tests""").fetchall()
 
     def save_tables(self):
         self.con.commit()
 
     def del_table(self):
-        self.curs.execute("""
+        self.con.execute("""
         DROP TABLE IF EXISTS questions """)
 
     def select_all(self, table, param, note):
-        context = f"""SELECT * FROM {table} WHERE {param} = ?"""
+        context = f"""SELECT * FROM {"tests.public."+table} WHERE {param} = %s"""
         self.curs.execute(context, (note,))
 
     def create_temp_table(self):
-        self.curs.execute("""CREATE TEMPORARY TABLE temp_1(
+        self.con.execute("""CREATE TEMPORARY TABLE temp_1(
         parametr INTEGER)""")
 
 
+    def last_insert_id(self, table_name, pk_name):
+        sequence = f"{table_name}_{pk_name}_seq"
+        return self.con.execute(f"SELECT last_value from {sequence}").fetchone()[0]
+
+
 if __name__ == "__main__":  # Для тестов
-    tests = TestsTable("tests.sqlite3")
-    tests.con.commit()
-    tests.curs.close()
+    t = TestsTable("tests")
+    t.select_all("questions", "question_id", 3)
+    print(t.curs.fetchone())
+    t.curs.close()
+
+
+
+
