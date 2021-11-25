@@ -1,8 +1,9 @@
-from random import choices
+from random import sample
 
-from aiogram.types import InlineKeyboardButton
+from aiogram.types import InlineKeyboardButton, CallbackQuery
 from db.initialisation import TestsTable
 from keyboards.inline_keyboards.callback_datas import select_test_callback
+from utils.create_test.create_test import Test
 
 
 def create_buttons_pattern(rows: int, numbers_in_rows: int, data) -> list:
@@ -22,8 +23,6 @@ def create_buttons_pattern(rows: int, numbers_in_rows: int, data) -> list:
 
 def get_random_tests_data(count: int, db: TestsTable):
     data: list = db.get_all_tests()
-    return choices(data, k=count)
-
-
-def get_questions_for_test(test_id: int) -> list:
-    pass
+    if count > len(data):
+        count = len(data)
+    return sample(data, k=count)

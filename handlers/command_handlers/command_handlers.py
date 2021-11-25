@@ -3,7 +3,7 @@
 from aiogram.dispatcher import FSMContext
 
 from db.initialisation import TestsTable
-from keyboards.inline_keyboards.choice_right_answer_in_test import create_menu
+from keyboards.inline_keyboards.choice_right_answer_in_test import choice_answer_menu
 from keyboards.inline_keyboards.polling_keyboard import create_poll_menu, test_choice, create_keyboard_with_random_tests
 from main import bot, dp
 from handlers.text_handlers.text_handlers import welcome_message
@@ -101,7 +101,12 @@ class TestCreator:
             right_answer = TestCreator.db_connection.curs.fetchone().right_answer
             await message.reply(text="Уже существует такой вопрос\nВот его параметры: ")
             await message.answer(
-                text=f"Вопрос:{TestCreator.question_text}\nВарианты ответов: \n{TestCreator.question.answer_1}\n{TestCreator.question.answer_2}\n{TestCreator.question.answer_3}\n{TestCreator.question.answer_4}")
+                text=f"""Вопрос:{TestCreator.question_text}
+            Варианты ответов: 
+            {TestCreator.question.answer_1}
+            {TestCreator.question.answer_2}
+            {TestCreator.question.answer_3}
+            {TestCreator.question.answer_4}""")
             await message.answer(text=f"Правильным ответом является: {right_answer}")
             await message.answer(text="Добавить этот вопрос с установленными параметрами?",
                                  reply_markup=create_poll_menu(params="question_selection"))
@@ -121,11 +126,12 @@ class TestCreator:
                 TestCreator.test.create(question_text=TestCreator.question_text, answers=TestCreator.answers_list)
                 print("question registered:", TestCreator.question_registered)
                 await message.answer(text="Какой ответ является верным?",
-                                     reply_markup=create_menu(TestCreator.answers_list))
+                                     reply_markup=choice_answer_menu(TestCreator.answers_list))
                 await CreateNameTest.Right_answer_became.set()
                 TestCreator.answers_list.clear()
                 TestCreator.answers_received = 1
         else:
+            right_answer = None
             print("Out From Iteration")
             questions = TestCreator.test.get_questions()
             for question in questions:
@@ -157,11 +163,13 @@ class TestShower:
 
     @staticmethod
     @dp.message_handler(Command("start_test"))
-    async def complete_test(message: Message):
+    async def start_complete_test(message: Message):
         TestShower.db_connection = TestsTable(database="tests")
         tests_data = get_random_tests_data(count=6, db=TestShower.db_connection)
+        print("tests_data", tests_data)
         await message.answer(text="Выберите тест, который хотите пройти:",
                              reply_markup=create_keyboard_with_random_tests(rows=2, numbers_in_rows=3, data=tests_data))
+        TestShower.db_connection.curs.close()
 
     @staticmethod
     @dp.message_handler(state=StartTest.Test_choice)

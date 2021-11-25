@@ -1,6 +1,5 @@
 # Скрипт для создания баз данных
 
-import sqlite3
 import psycopg
 from psycopg.rows import namedtuple_row
 from config import USER_NAME_DB, DB_PASSWORD
@@ -10,7 +9,8 @@ class TestsTable:
     def __init__(self, database):
         try:
             self.dir = database
-            self.con = psycopg.connect(dbname=self.dir, user=USER_NAME_DB, password=DB_PASSWORD, row_factory=namedtuple_row)
+            self.con = psycopg.connect(dbname=self.dir, user=USER_NAME_DB, password=DB_PASSWORD,
+                                       row_factory=namedtuple_row)
             self.curs = self.con.cursor()
             self.last_test_id = None
             self.create_table("tests")
@@ -65,16 +65,18 @@ class TestsTable:
     def into_table(self, table, notes, right_answer: str = None):
         if table == "tests":
             self.con.execute(
-                """INSERT INTO tests.public.tests(test_name, creator, questions, completed, visible) VALUES (%s, %s, %s, %s, %s)""",
+                """INSERT INTO tests.public.tests(test_name, creator, questions, completed, visible)
+                VALUES (%s, %s, %s, %s, %s)""",
                 notes)
             self.last_test_id = self.last_insert_id("tests", "test_id")
             print(self.last_test_id)
         if table == "questions":
             self.con.execute(
-                """INSERT INTO tests.public.questions(question_text, answer_1, answer_2, answer_3, answer_4) VALUES (%s, %s, %s, %s, %s)""",
+                """INSERT INTO tests.public.questions(question_text, answer_1, answer_2, answer_3, answer_4)
+                VALUES (%s, %s, %s, %s, %s)""",
                 notes)
             self.con.execute("""INSERT INTO tests.public.right_answers(question_id, right_answer) VALUES (%s, %s)""",
-                              (self.last_insert_id(table_name="questions", pk_name="question_id"), right_answer))
+                             (self.last_insert_id(table_name="questions", pk_name="question_id"), right_answer))
             self.con.execute("""INSERT INTO tests.public.questions_in_tests(test_id, question_id) VALUES (%s, %s)""",
                              (self.last_test_id, self.last_insert_id(table_name="questions", pk_name="question_id")))
 
@@ -82,11 +84,22 @@ class TestsTable:
         self.con.execute("""INSERT INTO tests.public.questions_in_tests(test_id, question_id) VALUES (%s, %s)""",
                          (self.last_test_id, question_id))
 
+    def get_test(self, test_id):
+        return self.con.execute("""SELECT test_name, questions FROM tests.public.tests WHERE test_id = %s""", (test_id,)).fetchone()
+
     def get_questions_for_test(self, test_id):
-        question_ids = [i["question_id"] for i in
-                        self.con.execute("""SELECT question_id FROM tests.public.questions_in_tests WHERE test_id = %s""",
-                                          (test_id,)).fetchall()]
-        return self.con.execute("""SELECT * FROM tests.public.questions WHERE question_id in (%s) """, (question_ids,)).fetchall()
+        question_ids = [i.question_id for i in
+                        self.con.execute("""SELECT 
+                        question_id 
+                        FROM 
+                        tests.public.questions_in_tests 
+                        WHERE 
+                        test_id = %s""", (test_id,)).fetchall()]
+        return (self.con.execute(f"""SELECT * FROM tests.public.questions
+        WHERE question_id IN {tuple(question_ids)}""").fetchall(),
+                self.con.execute(
+                    f"""SELECT * FROM tests.public.right_answers
+                    WHERE question_id in{tuple(question_ids)}""").fetchall())
 
     def get_all_tests(self):
         return self.con.execute("""SELECT test_id, test_name FROM tests.public.tests""").fetchall()
@@ -99,25 +112,18 @@ class TestsTable:
         DROP TABLE IF EXISTS questions """)
 
     def select_all(self, table, param, note):
-        context = f"""SELECT * FROM {"tests.public."+table} WHERE {param} = %s"""
+        context = f"""SELECT * FROM {"tests.public." + table} WHERE {param} = %s"""
         self.curs.execute(context, (note,))
-
-    def create_temp_table(self):
-        self.con.execute("""CREATE TEMPORARY TABLE temp_1(
-        parametr INTEGER)""")
-
 
     def last_insert_id(self, table_name, pk_name):
         sequence = f"{table_name}_{pk_name}_seq"
-        return self.con.execute(f"SELECT last_value from {sequence}").fetchone()[0]
+        return self.con.execute(f"SELECT * from {sequence}").fetchone().last_value
 
 
 if __name__ == "__main__":  # Для тестов
     t = TestsTable("tests")
-    t.select_all("questions", "question_id", 3)
-    print(t.curs.fetchone())
+    notes = tuple([3, 4, 5])
+    data = ('UK', 'France')
+    sql = 'SELECT * from tests.public.questions WHERE questions.question_id IN %s'
+    t.con.execute(sql, (data,))
     t.curs.close()
-
-
-
-

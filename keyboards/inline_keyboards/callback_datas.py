@@ -6,7 +6,7 @@ test_callback = CallbackData("test_10q", "response")
 
 test_menu_callback = CallbackData("test_menu", "choice")
 
-create_right_answer_callback = CallbackData("right_answer", "selected")
+selected_answer_callback = CallbackData("right_answer", "selected")
 
 polling_callback = CallbackData("polling", "selected", "context")
 
