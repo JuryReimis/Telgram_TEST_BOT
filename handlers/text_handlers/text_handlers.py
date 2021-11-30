@@ -1,8 +1,11 @@
 from keyboards.inline_keyboards.insults_choices import insult
-from main import bot, dp
-from keyboards.default.menu import menu
+from main import dp
 from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.dispatcher.filters import Text
+
+
+r"""Сюда попадают все текстовые сообщения, которые вводит пользователь, если найдено совпадение,
+то выполняется функция-хэндлер"""
 
 
 @dp.message_handler(Text(equals=["Пришли мне приветствие", "Привет"]))
