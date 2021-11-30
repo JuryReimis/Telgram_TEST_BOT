@@ -1,5 +1,6 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
+r"""Обычная клавиатура, которая появляется при вводе команды /menu"""
 menu = ReplyKeyboardMarkup(
     keyboard=[
         [
