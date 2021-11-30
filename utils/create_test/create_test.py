@@ -1,8 +1,10 @@
-from collections import namedtuple
+r"""Утилита для создания 'скелета' теста со своей структурой"""
 
 
 class Test:
     def __init__(self, test_name: str = None, questions_quantity: int = None):
+        r"""При создании экземпляра класса создаются структура, количество вопросов и словарь для ответов ползователя,
+        по-умолчанию-пустой"""
         self.test_structure = {
             "test_name": test_name,
             "questions": []
@@ -10,7 +12,9 @@ class Test:
         self.questions_quantity = questions_quantity
         self.user_answers: dict = {}
 
-    def create(self, question_text, answers):
+    def create(self, question_text: str, answers: list):
+        r"""Метод позволяет добавить очередной вопрос в структуру
+        в метод передается текст вопроса и список ответов"""
         self.test_structure["questions"].append(
             {
                 "text": question_text,
@@ -71,8 +75,11 @@ class Test:
                                                      ], })
         return self.test_structure
 
-    def create_users_answers(self, question, question_index: int, answer: int):
+    def create_users_answers(self, question: str, question_index: int, answer: int):
+        r"""При выборе ответа во время провидения викторины через эту функцию создается словарь, где ключем является
+         вопрос, а значением-ответ пользователя"""
         self.user_answers[question] = self.test_structure["questions"][question_index]["answers"][answer]["text"]
 
     def get_questions(self):
+        r"""Возвращает список вопросов"""
         return self.test_structure["questions"]
