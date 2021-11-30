@@ -1,8 +1,8 @@
 from aiogram.dispatcher import FSMContext
 from aiogram.types import Message, CallbackQuery
-from aiogram.dispatcher.filters import Command, Text
+from aiogram.dispatcher.filters import Command
 
-from keyboards.inline_keyboards.callback_datas import test_callback
+from keyboards.inline_keyboards.callback_dates import test_callback
 from states.test_10q.test_10q import TestTen
 
 from keyboards.inline_keyboards.test_10q_choices import creat_keyboard

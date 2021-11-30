@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from .callback_datas import test_callback
+from .callback_dates import test_callback
 
 
 def creat_keyboard(responses) -> InlineKeyboardMarkup:

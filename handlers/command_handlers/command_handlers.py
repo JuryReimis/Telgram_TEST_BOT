@@ -12,7 +12,7 @@ from keyboards.default import menu
 from aiogram.types import Message
 from config import admin_id
 from aiogram.dispatcher.filters import Command
-from states.creat_test.creat_test import CreateNameTest
+from states.creat_test.create_test import CreateNameTest
 from states.start_test.start_test import StartTest
 from utils.create_test.create_test import Test
 from utils.test_selection.test_selection import get_random_tests_data

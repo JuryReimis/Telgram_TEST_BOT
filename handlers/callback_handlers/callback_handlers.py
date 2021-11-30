@@ -3,11 +3,11 @@ from aiogram.types import CallbackQuery
 from db.initialisation import TestsTable
 from handlers.command_handlers.command_handlers import TestCreator, TestShower
 from keyboards.default import menu
-from keyboards.inline_keyboards.callback_datas import insult_callback, test_callback, selected_answer_callback, \
+from keyboards.inline_keyboards.callback_dates import insult_callback, test_callback, selected_answer_callback, \
     polling_callback, test_menu_callback, select_test_callback
 from keyboards.inline_keyboards.choice_right_answer_in_test import choice_answer_menu
 from main import dp
-from states.creat_test.creat_test import CreateNameTest
+from states.creat_test.create_test import CreateNameTest
 from states.start_test.start_test import StartTest
 from utils.create_test.create_test import Test
 from utils.test_selection.test_selection import answers_output
