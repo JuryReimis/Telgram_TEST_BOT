@@ -1,9 +1,10 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-
-from keyboards.inline_keyboards.callback_datas import insult_callback
+from keyboards.inline_keyboards.callback_dates import insult_callback
 
 
 def insult():
+    r"""Функция создает клавиатуру для выбора силы оскорбления
+    Возвращает клавиатуру"""
     choice_menu = InlineKeyboardMarkup(
         inline_keyboard=[
             [
