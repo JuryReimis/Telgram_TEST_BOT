@@ -1,4 +1,5 @@
-# Обработчики
+# Обработчики команд
+import string
 
 from aiogram.dispatcher import FSMContext
 
@@ -19,6 +20,7 @@ from collections import namedtuple
 
 
 class TestCreator:
+    r"""Класс для обработки всех комманд, связанных с созданием теста, а так же для обработки самого создания"""
     test: Test  # Экземпляр класса Тест
     question_registered: int  # Сколько вопросов уже зарегистрировано
     answers_received: int  # Получено ответов
@@ -33,6 +35,7 @@ class TestCreator:
                                CreateNameTest.Question_selection,
                                CreateNameTest.Create_answers, CreateNameTest.Right_answer_became])
     async def cancel_creating_test(message: Message, state: FSMContext):
+        r"""Метод-хэндлер отменяет создание теста, улавливая комманду /cancel"""
         TestCreator.test = None
         TestCreator.question_registered = 0
         TestCreator.answers_received = 1
@@ -44,6 +47,7 @@ class TestCreator:
     @staticmethod
     @dp.message_handler(Command("create_test"))
     async def create_test_name(message: Message):
+        r"""Улавливает комманду /create_test"""
         await message.reply(text="Напиши название теста")
         TestCreator.db_connection = TestsTable(database="tests")
         TestCreator.question_registered = 0
@@ -55,15 +59,15 @@ class TestCreator:
     @staticmethod
     @dp.message_handler(state=CreateNameTest.Name_is_creating)
     async def create_test_len(message: Message, state: FSMContext):
+        r"""Фиксирует название теста, отправляет на проверку на дубликаты"""
         name = str(message.text)
         TestCreator.db_connection.select_all("tests", "test_name", name)
         if TestCreator.db_connection.curs.fetchone() is None:
             await state.update_data(name=name)
-            data = await state.get_data()
-            print("data in create_test_len", data)
             await message.reply(text="Сколько будет вопросов?")
             await message.answer(
-                text="Если вам не нравится что-то из того, что вы ввели, вы можете сбросить создание теста, введя /cancel")
+                text="""Если вам не нравится что-то из того, что вы ввели, вы можете сбросить создание теста,
+введя /cancel""")
             await CreateNameTest.Get_tests_length.set()
         else:
             await message.reply(text="Тест с таким названием уже существует")
@@ -73,29 +77,37 @@ class TestCreator:
     @staticmethod
     @dp.message_handler(state=CreateNameTest.Get_tests_length)
     async def registration_tests_length(message: Message, state: FSMContext):
-        questions_quantity = int(message.text)  # Полученную из телеграма строку превращаем в число
-        await state.update_data(questions_quantity=questions_quantity)
-        data = await state.get_data()
-        print("data in registration_tests_length", data)
-        TestCreator.db_connection.into_table(table="tests",
-                                             notes=(data["name"], "MAIN_ADMIN", questions_quantity, 0, False))
-        TestCreator.test = Test(test_name=data["name"], questions_quantity=data["questions_quantity"])
-        await message.answer(text="Введите первый вопрос:")
-        await CreateNameTest.Question_selection.set()
+        r"""Получает длину теста, проверяет, является ли полученное сообщение числом"""
+        flag = True
+        for digit in message.text:
+            if digit not in string.digits:
+                flag = False
+        if flag:
+            questions_quantity = int(message.text)  # Полученную из телеграма строку превращаем в число
+            await state.update_data(questions_quantity=questions_quantity)
+            data = await state.get_data()
+            TestCreator.db_connection.into_table(table="tests",
+                                                 notes=(data["name"], "MAIN_ADMIN", questions_quantity, 0, False))
+            TestCreator.test = Test(test_name=data["name"], questions_quantity=data["questions_quantity"])
+            await message.answer(text="Введите первый вопрос:")
+            await CreateNameTest.Question_selection.set()
+        else:
+            await message.answer(text="Введено не число, повторите ввод")
 
     @staticmethod
     @dp.message_handler(
         state=CreateNameTest.Question_selection)  # Сюда попадают все вопросы, которые вводятся при фиксации вопросов
     async def question_selection(message: Message, state: FSMContext):
+        r"""Метод обрабатывает вопрос, который ввел пользователь, проверяет его наличие в БД и, в случае наличия,
+        предлагает добавить существующий вопрос в тест"""
         TestCreator.question_text = str(message.text)
         TestCreator.db_connection.select_all(table="questions", param="question_text", note=TestCreator.question_text)
-        if TestCreator.db_connection.curs.fetchone() is None:
+        if TestCreator.db_connection.curs.fetchone() is None:  # Проверка на наличие записи в БД
             await TestCreator.create_questions(message, state)
         else:
             TestCreator.db_connection.select_all(table="questions", param="question_text",
                                                  note=TestCreator.question_text)
             TestCreator.question = TestCreator.db_connection.curs.fetchone()
-            print("question:", TestCreator.question)
             TestCreator.db_connection.select_all(table="right_answers", param="question_id",
                                                  note=TestCreator.question.question_id)
             right_answer = TestCreator.db_connection.curs.fetchone().right_answer
@@ -114,6 +126,9 @@ class TestCreator:
     @staticmethod
     @dp.message_handler(state=CreateNameTest.Create_answers)
     async def create_questions(message: Message, state: FSMContext):
+        r"""Метод принимает текст вопроса, предлагает создать ответы и проверяет количество этих ответов в цикле
+        Так же при фиксации необходимого числа вопросов происходит завершение создания теста и
+        запись всего необходимогов БД"""
         if TestCreator.question_registered < TestCreator.test.questions_quantity:
             if TestCreator.answers_received == 1:
                 await message.reply(
@@ -124,7 +139,6 @@ class TestCreator:
                 await CreateNameTest.Answer_became.set()
             else:
                 TestCreator.test.create(question_text=TestCreator.question_text, answers=TestCreator.answers_list)
-                print("question registered:", TestCreator.question_registered)
                 await message.answer(text="Какой ответ является верным?",
                                      reply_markup=choice_answer_menu(TestCreator.answers_list))
                 await CreateNameTest.Right_answer_became.set()
@@ -132,7 +146,6 @@ class TestCreator:
                 TestCreator.answers_received = 1
         else:
             right_answer = None
-            print("Out From Iteration")
             questions = TestCreator.test.get_questions()
             for question in questions:
                 for ans in question.get("answers"):
@@ -153,8 +166,8 @@ class TestCreator:
     @staticmethod
     @dp.message_handler(state=CreateNameTest.Answer_became)  # Сюда попадают полученные от пользователя ответы
     async def answer_became(message: Message, state: FSMContext):
+        r"""Метод для обработки введенных пользователем ответов"""
         TestCreator.answers_list.append(message.text)
-        print("answer:", TestCreator.answers_list)
         await TestCreator.create_questions(message=message, state=state)
 
 
