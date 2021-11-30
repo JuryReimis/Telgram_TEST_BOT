@@ -1,9 +1,12 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-from keyboards.inline_keyboards.callback_datas import selected_answer_callback
+from keyboards.inline_keyboards.callback_dates import selected_answer_callback
 
 
 def choice_answer_menu(answer, flag=None):
+    r"""Функция возвращает инлайн-клавиатуру
+    В функции происходит формирование клавиатуры, в зависимости от переданных данных, если флаг performed
+    не передан, тогда считается, что клавиатура создана для выбора правильного ответа при создании теста.
+    Если передан флаг, то это клавиатура для выбора ответа во время тестирования"""
     if flag == "performed":
         answers = [i["text"] for i in answer]
     else:
