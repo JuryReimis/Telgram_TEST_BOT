@@ -67,7 +67,7 @@ class TestsTable:
             FOREIGN KEY (question_id) REFERENCES tests.public.questions(question_id) ON UPDATE CASCADE ON DELETE CASCADE 
             )""")
 
-    def into_table(self, table: str, notes: str, right_answer: str = None):
+    def into_table(self, table: str, notes: list or tuple, right_answer: str = None):
         r"""Метод нужен для добавления в таблицы необходимых данных
         в table передается название таблицы, в notes данные, которые нужно записать в таблицу, right_answer-ситуативный
         аргумент, передается только если записываем в таблицу questions
