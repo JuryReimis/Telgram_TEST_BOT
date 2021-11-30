@@ -116,6 +116,8 @@ class TestOutput:
         TestOutput.test_id = int(callback_data["selected_id"])
         test_data = TestOutput.db_connect.get_test(callback_data["selected_id"])
         TestOutput.performed_test = Test(test_name=test_data.test_name, questions_quantity=test_data.questions)
+        questions, right_answer = TestOutput.db_connect.get_questions_for_test(callback_data["selected_id"])
+        TestOutput.performed_test.test_from_db(questions=questions, right_answers=right_answer)
         TestOutput.db_connect.curs.close()
         await call.message.answer(f'Выбран тест "{TestOutput.performed_test.test_structure["test_name"]}"')
         TestOutput.demonstrated_question = 0
@@ -151,5 +153,4 @@ class TestOutput:
                                  user_answers=TestOutput.performed_test.user_answers)
             TestOutput.db_connect.save_tables()
             TestOutput.db_connect.con.close()
-            print(TestOutput.performed_test.user_answers)
             await state.finish()
