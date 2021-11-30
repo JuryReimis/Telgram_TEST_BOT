@@ -1,6 +1,8 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from keyboards.inline_keyboards.callback_datas import polling_callback, select_test_callback, test_menu_callback
+from keyboards.inline_keyboards.callback_dates import polling_callback, select_test_callback, test_menu_callback
 from utils.test_selection.test_selection import create_buttons_pattern
+
+r"""Здесь осуществляется создание клавиатур для выбора чего-либо"""
 
 
 def create_poll_menu(params: str):
@@ -34,6 +36,7 @@ def create_keyboard_with_random_tests(rows: int, numbers_in_rows: int, data: lis
     return random_poll_menu
 
 
+r"""Создает клавиатуру, которая позволяет осуществить выбор действия над тестами"""
 test_choice = InlineKeyboardMarkup(
     inline_keyboard=[
         [
