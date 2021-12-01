@@ -2,7 +2,7 @@ r"""Здесь происходит все взаимодействие с ба�
 
 import psycopg
 from psycopg.rows import namedtuple_row
-from config import USER_NAME_DB, DB_PASSWORD
+from config import USER_NAME_DB, DB_PASSWORD, DB_HOST, DB_PORT
 
 
 class TestsTable:
@@ -12,8 +12,8 @@ class TestsTable:
     def __init__(self, database):
         try:
             self.dir = database
-            self.con = psycopg.connect(dbname=self.dir, user=USER_NAME_DB, password=DB_PASSWORD,
-                                       row_factory=namedtuple_row)
+            self.con = psycopg.connect(dbname=self.dir, user=USER_NAME_DB, password=DB_PASSWORD, host=DB_HOST,
+                                       port=DB_PORT, row_factory=namedtuple_row)
             self.curs = self.con.cursor()
             self.last_test_id = None
             self.create_table("tests")
